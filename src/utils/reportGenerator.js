@@ -3,32 +3,25 @@ import { saveAs } from "file-saver";
 
 export const generateWordReport = (records, departmentName) => {
 
-    // Helper: Calculate Age Summary
+    // Helper: Calculate Age Summary (Dynamic Ages)
     const getSummary = (data) => {
-        const summary = {
-            '1 Tahun': 0,
-            '2 Tahun': 0,
-            '3 Tahun': 0,
-            '4 Tahun': 0,
-        };
-
+        const summary = {};
         const currentYear = new Date().getFullYear();
 
         data.forEach(record => {
-            const ageVal = record.umur_komputer;
-            if (!ageVal) return;
-            let age = parseInt(ageVal, 10);
+            const val = parseInt(record.umur_komputer, 10);
+            if (isNaN(val)) return;
 
-            if (!isNaN(age)) {
-                // If value is a year (e.g. 2024), convert to age
-                if (age > 1900) {
-                    age = currentYear - age;
-                }
+            let age;
+            if (val > 1900) {
+                age = currentYear - val;
+            } else {
+                age = val;
+            }
 
-                if (age === 1) summary['1 Tahun']++;
-                else if (age === 2) summary['2 Tahun']++;
-                else if (age === 3) summary['3 Tahun']++;
-                else if (age >= 4) summary['4 Tahun']++; // Buckets 4+ into 4 Tahun
+            if (age !== undefined && age >= 0) {
+                const key = `${age} Tahun`;
+                summary[key] = (summary[key] || 0) + 1;
             }
         });
         return summary;
@@ -39,7 +32,7 @@ export const generateWordReport = (records, departmentName) => {
         const tableHeader = new TableRow({
             children: [
                 new TableCell({
-                    children: [new Paragraph({ children: [new TextRun({ text: "Tahun PC", bold: false })] })], // Template shows normal weight or slight bold
+                    children: [new Paragraph({ children: [new TextRun({ text: "Umur PC", bold: false })] })],
                     width: { size: 50, type: WidthType.PERCENTAGE },
                     margins: { top: 100, bottom: 100, left: 100, right: 100 },
                 }),
@@ -51,7 +44,12 @@ export const generateWordReport = (records, departmentName) => {
             ],
         });
 
-        const dataRows = Object.keys(summary).map((key) => {
+        // Sort Ascending by Age (1, 2, 10...)
+        const sortedKeys = Object.keys(summary).sort((a, b) => parseInt(a) - parseInt(b));
+
+        const dataRows = sortedKeys.map((key) => {
+            if (!summary[key] || summary[key] <= 0) return null;
+
             return new TableRow({
                 children: [
                     new TableCell({
@@ -64,7 +62,7 @@ export const generateWordReport = (records, departmentName) => {
                     }),
                 ],
             });
-        });
+        }).filter(row => row !== null);
 
         return new Table({
             rows: [tableHeader, ...dataRows],
@@ -83,10 +81,7 @@ export const generateWordReport = (records, departmentName) => {
 
     const docChildren = [];
 
-    // Only add Main Title if NOT strictly following the 'list' template for admin
-    // The user's image starts directly with "Bahagian IT".
-    // We will conditionally add a title for single-dept reports, but for "Keseluruhan", we might just skip it or make it small.
-    // Let's adhere to "follow this template": The template HAS NO main title.
+    // Only add Main Title if NOT directly listing departments (or for single dept report)
     if (departmentName !== 'Keseluruhan') {
         docChildren.push(
             new Paragraph({
@@ -110,7 +105,7 @@ export const generateWordReport = (records, departmentName) => {
             // Dept Header
             docChildren.push(
                 new Paragraph({
-                    children: [new TextRun({ text: dept, size: 24 })], // Regular size 12pt (24 half-pt), no bold per template if strictly followed? Image looks normal.
+                    children: [new TextRun({ text: dept, size: 24 })],
                     spacing: { before: 400, after: 100 },
                 })
             );
