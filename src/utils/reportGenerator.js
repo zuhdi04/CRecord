@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, TextRun, HeadingLevel } from "docx";
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, TextRun, BorderStyle } from "docx";
 import { saveAs } from "file-saver";
 
 export const generateWordReport = (records, departmentName) => {
@@ -31,15 +31,13 @@ export const generateWordReport = (records, departmentName) => {
         const tableHeader = new TableRow({
             children: [
                 new TableCell({
-                    children: [new Paragraph({ children: [new TextRun({ text: "Tahun PC", bold: true })] })],
+                    children: [new Paragraph({ children: [new TextRun({ text: "Tahun PC", bold: false })] })], // Template shows normal weight or slight bold
                     width: { size: 50, type: WidthType.PERCENTAGE },
-                    verticalAlign: "center",
                     margins: { top: 100, bottom: 100, left: 100, right: 100 },
                 }),
                 new TableCell({
-                    children: [new Paragraph({ children: [new TextRun({ text: "Jumlah", bold: true })] })],
+                    children: [new Paragraph({ children: [new TextRun({ text: "Jumlah", bold: false })] })],
                     width: { size: 50, type: WidthType.PERCENTAGE },
-                    verticalAlign: "center",
                     margins: { top: 100, bottom: 100, left: 100, right: 100 },
                 }),
             ],
@@ -63,70 +61,66 @@ export const generateWordReport = (records, departmentName) => {
         return new Table({
             rows: [tableHeader, ...dataRows],
             width: { size: 100, type: WidthType.PERCENTAGE },
+            // Ensure simple borders
+            borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
         });
     };
 
     const docChildren = [];
-    const mainTitle = departmentName === 'Keseluruhan' ? "Laporan Keseluruhan Mengikut Bahagian" : (departmentName || "Bahagian IT");
 
-    // Title Paragraph
-    docChildren.push(
-        new Paragraph({
-            children: [
-                new TextRun({
-                    text: mainTitle,
-                    bold: true,
-                    size: 28,
-                }),
-            ],
-            spacing: { after: 400 },
-        })
-    );
+    // Only add Main Title if NOT strictly following the 'list' template for admin
+    // The user's image starts directly with "Bahagian IT".
+    // We will conditionally add a title for single-dept reports, but for "Keseluruhan", we might just skip it or make it small.
+    // Let's adhere to "follow this template": The template HAS NO main title.
+    if (departmentName !== 'Keseluruhan') {
+        docChildren.push(
+            new Paragraph({
+                children: [new TextRun({ text: departmentName || "Bahagian IT", bold: true, size: 28 })],
+                spacing: { after: 400 },
+            })
+        );
+    }
 
     if (departmentName === 'Keseluruhan') {
-        // Group by Department
         const groups = {};
         records.forEach(r => {
-            // Normalize dept name
             const d = r.dept || r.cawangan || 'Lain-lain';
             if (!groups[d]) groups[d] = [];
             groups[d].push(r);
         });
 
-        // Sort departments alphabetically
         const sortedDepts = Object.keys(groups).sort();
 
         sortedDepts.forEach(dept => {
-            // Department Header
+            // Dept Header
             docChildren.push(
                 new Paragraph({
-                    children: [new TextRun({ text: dept, bold: true, size: 24 })],
-                    spacing: { before: 400, after: 200 },
-                    heading: HeadingLevel.HEADING_2
+                    children: [new TextRun({ text: dept, size: 24 })], // Regular size 12pt (24 half-pt), no bold per template if strictly followed? Image looks normal.
+                    spacing: { before: 400, after: 100 },
                 })
             );
 
-            // Summary Table for Dept
+            // Table
             const summary = getSummary(groups[dept]);
-            const table = createSummaryTable(summary);
-            docChildren.push(table);
+            docChildren.push(createSummaryTable(summary));
+            // Add spacing between tables
+            docChildren.push(new Paragraph(""));
         });
 
     } else {
-        // Single Department Report
         const summary = getSummary(records);
-        const table = createSummaryTable(summary);
-        docChildren.push(table);
+        docChildren.push(createSummaryTable(summary));
     }
 
-    // Generator
     const doc = new Document({
-        sections: [
-            {
-                properties: {},
-                children: docChildren,
-            },
-        ],
+        sections: [{ properties: {}, children: docChildren }],
     });
 
     Packer.toBlob(doc).then((blob) => {
