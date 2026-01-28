@@ -12,15 +12,23 @@ export const generateWordReport = (records, departmentName) => {
             '4 Tahun': 0,
         };
 
+        const currentYear = new Date().getFullYear();
+
         data.forEach(record => {
             const ageVal = record.umur_komputer;
             if (!ageVal) return;
-            const age = parseInt(ageVal, 10);
+            let age = parseInt(ageVal, 10);
+
             if (!isNaN(age)) {
+                // If value is a year (e.g. 2024), convert to age
+                if (age > 1900) {
+                    age = currentYear - age;
+                }
+
                 if (age === 1) summary['1 Tahun']++;
                 else if (age === 2) summary['2 Tahun']++;
                 else if (age === 3) summary['3 Tahun']++;
-                else if (age >= 4) summary['4 Tahun']++;
+                else if (age >= 4) summary['4 Tahun']++; // Buckets 4+ into 4 Tahun
             }
         });
         return summary;

@@ -146,7 +146,15 @@ const Dashboard = () => {
                                                 <div style={{ fontSize: '0.8em', color: '#666' }}>({record.project_date})</div>
                                             )}
                                         </td>
-                                        <td style={{ textAlign: 'center' }}>{record.umur_komputer || '-'}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            {(() => {
+                                                const val = parseInt(record.umur_komputer);
+                                                if (!isNaN(val)) {
+                                                    return val > 1900 ? new Date().getFullYear() - val : val;
+                                                }
+                                                return record.umur_komputer || '-';
+                                            })()}
+                                        </td>
                                         <td>{record.final_processor || record.jenis_processor || '-'}</td>
                                         <td>{record.saiz_ram ? `${record.saiz_ram} GB` : '-'}</td>
                                         <td>{record.jenis_sistem || '-'}</td>
