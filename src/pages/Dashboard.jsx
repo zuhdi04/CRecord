@@ -114,7 +114,8 @@ const Dashboard = () => {
                         <table id="printTable">
                             <thead>
                                 <tr>
-                                    <th>NAMA PENUH</th>
+                                    <th style={{ minWidth: '150px' }}>NAMA PENUH</th>
+                                    {role === 'admin' && <th>BAHAGIAN</th>}
                                     <th>JAWATAN DAN GRED</th>
                                     <th>KAKITANGAN: NEGERI / PERSEKUTUAN</th>
                                     <th>JENIS KOMPUTER</th>
@@ -131,11 +132,12 @@ const Dashboard = () => {
                             <tbody>
                                 {filteredRecords.length === 0 ? (
                                     <tr>
-                                        <td colSpan="12" style={{ textAlign: 'center', padding: '20px' }}>No data available in table</td>
+                                        <td colSpan={role === 'admin' ? "13" : "12"} style={{ textAlign: 'center', padding: '20px' }}>No data available in table</td>
                                     </tr>
                                 ) : filteredRecords.map(record => (
                                     <tr key={record.id}>
                                         <td style={{ fontWeight: 'bold' }}>{record.nama_penuh || record.title || '-'}</td>
+                                        {role === 'admin' && <td>{record.dept || record.cawangan || '-'}</td>}
                                         <td>{record.jawatan_gred || '-'}</td>
                                         <td>{record.kakitangan || '-'}</td>
                                         <td>
