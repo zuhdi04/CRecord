@@ -3,13 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
-import { Plus, FileText, Calendar, User, Search } from 'lucide-react';
+import { Plus, FileText, Calendar, User, Search, Trash2, Edit } from 'lucide-react';
 
 const Dashboard = () => {
     const { user, role, dept } = useAuth();
     const navigate = useNavigate();
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const deleteRecord = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this record?")) return;
+        try {
+            const { deleteDoc, doc } = await import("firebase/firestore");
+            await deleteDoc(doc(db, 'records', id));
+        } catch (error) {
+            console.error("Error deleting record", error);
+            alert("Failed to delete record");
+        }
+    };
 
     useEffect(() => {
         if (!user) return;
@@ -89,39 +100,67 @@ const Dashboard = () => {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {records.map(record => (
-                        <div key={record.id} className="glass-panel p-6 rounded-xl hover:translate-y-[-4px] transition-all group">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="bg-blue-500/10 text-blue-400 p-2 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                                    <FileText size={20} />
-                                </div>
-                                <span className="text-xs font-medium text-[var(--text-secondary)] bg-[var(--bg-secondary)] px-2 py-1 rounded border border-slate-700">
-                                    {record.dept}
-                                </span>
-                            </div>
-
-                            <h3 className="text-lg font-bold mb-2 truncate" title={record.title}>{record.title}</h3>
-                            <p className="text-[var(--text-secondary)] text-sm mb-6 line-clamp-3">
-                                {record.description}
-                            </p>
-
-                            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] pt-4 border-t border-slate-700/50">
-                                <div className="flex items-center gap-1.5" title={record.creatorEmail}>
-                                    <User size={14} />
-                                    <span className="truncate max-w-[100px]">{record.creatorEmail?.split('@')[0]}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <Calendar size={14} />
-                                    <span>
-                                        {record.createdAt?.toMillis
-                                            ? new Date(record.createdAt.toMillis()).toLocaleDateString()
-                                            : 'Just now'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                <div className="glass-panel rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr className="bg-[var(--bg-secondary)] border-b border-slate-700/50 text-[var(--text-secondary)]">
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Nama Penuh</th>
+                                    {role === 'admin' && <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Cawangan / Bahagian</th>}
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Jawatan & Gred</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Kakitangan</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Jenis Komputer</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Umur (Tahun)</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Processor</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">RAM</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Sistem</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">Antivirus</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider whitespace-nowrap">IP Address</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider">Catatan</th>
+                                    <th className="p-3 font-semibold uppercase tracking-wider text-right">Operasi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-700/50">
+                                {records.map(record => (
+                                    <tr key={record.id} className="hover:bg-slate-800/30 transition-colors">
+                                        <td className="p-3 font-medium">{record.nama_penuh || record.title || '-'}</td>
+                                        {role === 'admin' && <td className="p-3 text-[var(--text-secondary)]">{record.dept || record.cawangan || '-'}</td>}
+                                        <td className="p-3 text-[var(--text-secondary)]">{record.jawatan_gred || '-'}</td>
+                                        <td className="p-3 text-[var(--text-secondary)]">{record.kakitangan || '-'}</td>
+                                        <td className="p-3 text-[var(--text-secondary)]">
+                                            {record.jenis_komputer || '-'}
+                                            {record.jenis_komputer === 'PROJEK' && record.project_date && (
+                                                <div className="text-xs opacity-70 mt-1">Tamat: {record.project_date}</div>
+                                            )}
+                                        </td>
+                                        <td className="p-3 text-[var(--text-secondary)] text-center">{record.umur_komputer || '-'}</td>
+                                        <td className="p-3 text-[var(--text-secondary)]">{record.final_processor || record.jenis_processor || '-'}</td>
+                                        <td className="p-3 text-[var(--text-secondary)]">{record.saiz_ram ? `${record.saiz_ram} GB` : '-'}</td>
+                                        <td className="p-3 text-[var(--text-secondary)]">{record.jenis_sistem || '-'}</td>
+                                        <td className="p-3 text-[var(--text-secondary)]">{record.antivirus || '-'}</td>
+                                        <td className="p-3 text-[var(--text-secondary)] font-mono text-xs">{record.ipv4_address || '-'}</td>
+                                        <td className="p-3 text-[var(--text-secondary)] text-xs max-w-[200px] truncate" title={record.catatan}>
+                                            {record.catatan || '-'}
+                                        </td>
+                                        <td className="p-3 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                {/* Placeholder Edit */}
+                                                <button className="text-blue-400 hover:text-blue-300 p-1">
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteRecord(record.id)}
+                                                    className="text-red-400 hover:text-red-300 p-1"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
