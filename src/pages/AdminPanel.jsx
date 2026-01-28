@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, doc, updateDoc, setDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Users, Shield, Briefcase, ChevronDown } from 'lucide-react';
 
@@ -37,6 +37,18 @@ const AdminPanel = () => {
         } catch (error) {
             console.error("Error updating user", error);
             alert("Failed to update user");
+        }
+    };
+
+    const deleteUser = async (userId) => {
+        if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
+
+        try {
+            await deleteDoc(doc(db, 'users', userId));
+            setUsers(users.filter(user => user.id !== userId));
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            alert("Failed to delete user.");
         }
     };
 
@@ -169,7 +181,7 @@ const AdminPanel = () => {
                                             </div>
                                             <div>
                                                 <div className="font-medium">{user.email}</div>
-                                                <div className="text-xs text-[var(--text-secondary)] font-mono">ID: {user.id.slice(0, 8)}...</div>
+                                                {/* <div className="text-xs text-[var(--text-secondary)] font-mono">ID: {user.id.slice(0, 8)}...</div> */}
                                             </div>
                                         </div>
                                     </td>
@@ -203,7 +215,12 @@ const AdminPanel = () => {
                                     </td>
                                     <td className="p-4 text-[var(--text-secondary)] text-sm">
                                         {/* Placeholder for future actions */}
-                                        <button className="hover:text-red-400 transition-colors">Remove</button>
+                                        <button
+                                            onClick={() => deleteUser(user.id)}
+                                            className="hover:text-red-400 transition-colors"
+                                        >
+                                            Remove
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
