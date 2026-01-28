@@ -5,6 +5,7 @@ import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
+import NewRecord from './pages/NewRecord';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/new-record" element={<NewRecord />} />
 
               {/* Admin Only Routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>

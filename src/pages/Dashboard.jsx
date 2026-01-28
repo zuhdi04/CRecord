@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
@@ -6,10 +7,9 @@ import { Plus, FileText, Calendar, User, Search } from 'lucide-react';
 
 const Dashboard = () => {
     const { user, role, dept } = useAuth();
+    const navigate = useNavigate();
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
-    const [newRecord, setNewRecord] = useState({ title: '', description: '' });
 
     useEffect(() => {
         if (!user) return;
@@ -51,26 +51,7 @@ const Dashboard = () => {
         return () => unsubscribe();
     }, [user, role, dept]);
 
-    const handleCreate = async (e) => {
-        e.preventDefault();
-        if (!newRecord.title || !newRecord.description) return;
 
-        try {
-            await addDoc(collection(db, 'records'), {
-                title: newRecord.title,
-                description: newRecord.description,
-                dept: dept || 'Unassigned', // Auto-inject department
-                createdBy: user.uid,
-                creatorEmail: user.email,
-                createdAt: serverTimestamp()
-            });
-            setShowModal(false);
-            setNewRecord({ title: '', description: '' });
-        } catch (error) {
-            console.error("Error creating record", error);
-            alert(`Failed to create record: ${error.message}`);
-        }
-    };
 
     return (
         <div>
@@ -85,7 +66,7 @@ const Dashboard = () => {
                 </div>
 
                 <button
-                    onClick={() => setShowModal(true)}
+                    onClick={() => navigate('/new-record')}
                     className="bg-[var(--accent-primary)] hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-95"
                 >
                     <Plus size={20} />
@@ -145,52 +126,7 @@ const Dashboard = () => {
             )}
 
             {/* Create Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="glass-panel w-full max-w-lg rounded-2xl p-6 relative animate-in fade-in zoom-in-95 duration-200">
-                        <h2 className="text-2xl font-bold mb-6">Create New Record</h2>
-                        <form onSubmit={handleCreate} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Title</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={newRecord.title}
-                                    onChange={e => setNewRecord({ ...newRecord, title: e.target.value })}
-                                    className="w-full bg-[var(--bg-secondary)] border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-blue-500"
-                                    placeholder="Record Name"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Description</label>
-                                <textarea
-                                    required
-                                    rows="4"
-                                    value={newRecord.description}
-                                    onChange={e => setNewRecord({ ...newRecord, description: e.target.value })}
-                                    className="w-full bg-[var(--bg-secondary)] border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-blue-500 resize-none"
-                                    placeholder="Enter details..."
-                                ></textarea>
-                            </div>
-                            <div className="flex gap-3 mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="flex-1 py-2.5 rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors bg-transparent"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 py-2.5 rounded-lg bg-[var(--accent-primary)] hover:bg-blue-600 text-white font-medium transition-colors"
-                                >
-                                    Create
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 };
