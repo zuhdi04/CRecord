@@ -85,6 +85,7 @@ const Dashboard = () => {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {/* Keep Download Report functionality available but unobtrusive or styled nicely */}
+                    <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Muat Turun</label>
                     <button
                         onClick={() => generateWordReport(records, role === 'admin' ? 'Keseluruhan' : dept)}
                         title="Download Report"
