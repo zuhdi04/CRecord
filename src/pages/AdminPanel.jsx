@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { Users, Shield, Briefcase, ChevronDown } from 'lucide-react';
+import { Users, ChevronDown } from 'lucide-react';
 
 const AdminPanel = () => {
     const [users, setUsers] = useState([]);
@@ -106,18 +106,9 @@ const AdminPanel = () => {
             // 4. If a department was provided, ensure it exists in the 'departments' collection
             if (newUser.dept) {
                 const deptName = newUser.dept.trim();
-                // Use the department name as the document ID to prevent duplicates easily, 
-                // or use a query to check existence if we want auto-IDs. 
-                // For simplicity and uniqueness, using a sanitized name as ID or check-then-add is good.
-                // Here, let's just use setDoc with a custom ID (slugified) or just add it if strictly needed.
-                // The user said "save to the new collection".
-                // Let's us setDoc to ensure we don't duplicate logical entries if they type "IT" and "IT" exists.
-                // We will create a document reference with the name as a key or just add it.
-                // To make it easy: ID = deptName
                 await setDoc(firestoreDoc(db, 'departments', deptName), {
                     name: deptName
                 });
-                // Refresh departments list
                 fetchDepartments();
             }
 
@@ -136,148 +127,129 @@ const AdminPanel = () => {
         }
     };
 
-    // const departments = ["Sales", "IT", "Engineering", "HR", "Legal"];
-
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div>
-                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
-                        User Management
-                    </h1>
-                    <p className="text-[var(--text-secondary)] mt-1">Manage system access and department assignments</p>
+                    <h1>User Management</h1>
+                    <p style={{ color: '#666' }}>Manage system access and department assignments</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-5 py-2.5 rounded-lg shadow-lg shadow-pink-500/20 active:scale-95 transition-all font-medium"
+                    className="btnAdd"
                 >
-                    <Users size={20} />
+                    <Users size={20} style={{ marginRight: '5px' }} />
                     Add User
                 </button>
             </div>
 
-            <div className="glass-panel overflow-hidden rounded-xl">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[var(--bg-secondary)] border-b border-slate-700/50">
-                                <th className="p-4 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">User</th>
-                                <th className="p-4 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Role</th>
-                                <th className="p-4 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Department</th>
-                                <th className="p-4 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Actions</th>
+            <div style={{ overflowX: 'auto' }}>
+                <table id="printTable">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>Loading users...</td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-700/50">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="4" className="p-8 text-center text-[var(--text-secondary)]">Loading users...</td>
-                                </tr>
-                            ) : users.map(user => (
-                                <tr key={user.id} className="hover:bg-slate-800/30 transition-colors">
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold">
-                                                {user.email?.[0].toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">{user.email}</div>
-                                                {/* <div className="text-xs text-[var(--text-secondary)] font-mono">ID: {user.id.slice(0, 8)}...</div> */}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => updateUser(user.id, 'role', user.role === 'admin' ? 'staff' : 'admin')}
-                                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${user.role === 'admin'
-                                                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/30 hover:bg-purple-500/30'
-                                                    : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700'
-                                                    }`}
-                                            >
-                                                {user.role || 'staff'}
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="relative inline-block w-40">
-                                            <select
-                                                value={user.dept || ''}
-                                                onChange={(e) => updateUser(user.id, 'dept', e.target.value)}
-                                                className="w-full appearance-none bg-[var(--bg-primary)] border border-slate-700 hover:border-slate-600 text-[var(--text-primary)] text-sm rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
-                                            >
-                                                <option value="" disabled>Unassigned</option>
-                                                {departments.map(dept => (
-                                                    <option key={dept} value={dept}>{dept}</option>
-                                                ))}
-                                            </select>
-                                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" />
-                                        </div>
-                                    </td>
-                                    <td className="p-4 text-[var(--text-secondary)] text-sm">
-                                        {/* Placeholder for future actions */}
-                                        <button
-                                            onClick={() => deleteUser(user.id)}
-                                            className="hover:text-red-400 transition-colors"
-                                        >
-                                            Remove
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                        ) : users.map(user => (
+                            <tr key={user.id}>
+                                <td>
+                                    <div style={{ fontWeight: 'bold' }}>{user.email}</div>
+                                </td>
+                                <td>
+                                    <button
+                                        onClick={() => updateUser(user.id, 'role', user.role === 'admin' ? 'staff' : 'admin')}
+                                        style={{
+                                            padding: '2px 8px',
+                                            borderRadius: '12px',
+                                            border: '1px solid #ccc',
+                                            backgroundColor: user.role === 'admin' ? '#e2e8f0' : '#f8f9fa',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {user.role || 'staff'}
+                                    </button>
+                                </td>
+                                <td>
+                                    <select
+                                        value={user.dept || ''}
+                                        onChange={(e) => updateUser(user.id, 'dept', e.target.value)}
+                                        style={{ width: '100%', padding: '5px' }}
+                                    >
+                                        <option value="" disabled>Unassigned</option>
+                                        {departments.map(dept => (
+                                            <option key={dept} value={dept}>{dept}</option>
+                                        ))}
+                                    </select>
+                                </td>
+                                <td>
+                                    <button
+                                        onClick={() => deleteUser(user.id)}
+                                        className="btn-delete"
+                                        style={{ backgroundColor: '#dc3545', color: 'white', padding: '5px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
+                                    >
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
             {/* Create User Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="glass-panel w-full max-w-md rounded-2xl p-6 relative animate-in fade-in zoom-in-95 duration-200">
-                        <h2 className="text-2xl font-bold mb-6">Add New User</h2>
-                        <form onSubmit={handleCreateUser} className="space-y-4">
+                <div className="modal" style={{ display: 'block' }}>
+                    <div className="modal-content" style={{ maxWidth: '500px' }}>
+                        <span className="close" onClick={() => setShowCreateModal(false)}>&times;</span>
+                        <h2 style={{ marginBottom: '20px' }}>Add New User</h2>
+                        <form onSubmit={handleCreateUser} className="form-container">
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Email</label>
+                                <label>Email</label>
                                 <input
                                     type="email"
                                     required
                                     value={newUser.email}
                                     onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-                                    className="w-full bg-[var(--bg-secondary)] border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-purple-500"
                                     placeholder="user@company.com"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Password</label>
+                                <label>Password</label>
                                 <input
                                     type="password"
                                     required
                                     minLength={6}
                                     value={newUser.password}
                                     onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                                    className="w-full bg-[var(--bg-secondary)] border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-purple-500"
                                     placeholder="••••••••"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div>
-                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Role</label>
+                                    <label>Role</label>
                                     <select
                                         value={newUser.role}
                                         onChange={e => setNewUser({ ...newUser, role: e.target.value })}
-                                        className="w-full bg-[var(--bg-secondary)] border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-purple-500"
                                     >
                                         <option value="staff">Staff</option>
                                         <option value="admin">Admin</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Department</label>
+                                    <label>Department</label>
                                     <input
                                         type="text"
                                         required
                                         value={newUser.dept}
                                         onChange={e => setNewUser({ ...newUser, dept: e.target.value })}
-                                        className="w-full bg-[var(--bg-secondary)] border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-purple-500"
                                         placeholder="Enter Department Name"
                                         list="dept-suggestions"
                                     />
@@ -289,17 +261,19 @@ const AdminPanel = () => {
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 mt-6">
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                                 <button
                                     type="button"
                                     onClick={() => setShowCreateModal(false)}
-                                    className="flex-1 py-2.5 rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors bg-transparent"
+                                    className="reset"
+                                    style={{ flex: 1 }}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium transition-colors"
+                                    className="button"
+                                    style={{ flex: 1 }}
                                 >
                                     Create User
                                 </button>
@@ -313,3 +287,4 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
+

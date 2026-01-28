@@ -18,6 +18,7 @@ function App() {
             <Route element={<MainLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/new-record" element={<NewRecord />} />
+              <Route path="/edit-record/:id" element={<NewRecord />} />
 
               {/* Admin Only Routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
