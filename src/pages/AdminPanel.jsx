@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, setDoc, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Users, Shield, Briefcase, ChevronDown } from 'lucide-react';
 
@@ -9,6 +9,7 @@ const AdminPanel = () => {
 
     useEffect(() => {
         fetchUsers();
+        fetchDepartments();
     }, []);
 
     const fetchUsers = async () => {
@@ -36,6 +37,19 @@ const AdminPanel = () => {
         } catch (error) {
             console.error("Error updating user", error);
             alert("Failed to update user");
+        }
+    };
+
+    const [departments, setDepartments] = useState([]);
+
+    const fetchDepartments = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, 'departments'));
+            const deptList = querySnapshot.docs.map(doc => doc.data().name).filter(Boolean);
+            // Remove duplicates just in case and sort
+            setDepartments([...new Set(deptList)].sort());
+        } catch (error) {
+            console.error("Error fetching departments", error);
         }
     };
 
@@ -77,6 +91,24 @@ const AdminPanel = () => {
                 createdAt: new Date()
             });
 
+            // 4. If a department was provided, ensure it exists in the 'departments' collection
+            if (newUser.dept) {
+                const deptName = newUser.dept.trim();
+                // Use the department name as the document ID to prevent duplicates easily, 
+                // or use a query to check existence if we want auto-IDs. 
+                // For simplicity and uniqueness, using a sanitized name as ID or check-then-add is good.
+                // Here, let's just use setDoc with a custom ID (slugified) or just add it if strictly needed.
+                // The user said "save to the new collection".
+                // Let's us setDoc to ensure we don't duplicate logical entries if they type "IT" and "IT" exists.
+                // We will create a document reference with the name as a key or just add it.
+                // To make it easy: ID = deptName
+                await setDoc(firestoreDoc(db, 'departments', deptName), {
+                    name: deptName
+                });
+                // Refresh departments list
+                fetchDepartments();
+            }
+
             // 4. Cleanup: Sign out and delete the secondary app
             await secondarySignOut(secondaryAuth);
             await deleteApp(secondaryApp);
@@ -92,7 +124,7 @@ const AdminPanel = () => {
         }
     };
 
-    const departments = ["Sales", "IT", "Engineering", "HR", "Legal"];
+    // const departments = ["Sales", "IT", "Engineering", "HR", "Legal"];
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -223,17 +255,20 @@ const AdminPanel = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Department</label>
-                                    <select
+                                    <input
+                                        type="text"
                                         required
                                         value={newUser.dept}
                                         onChange={e => setNewUser({ ...newUser, dept: e.target.value })}
                                         className="w-full bg-[var(--bg-secondary)] border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-purple-500"
-                                    >
-                                        <option value="" disabled>Select Dept</option>
+                                        placeholder="Enter Department Name"
+                                        list="dept-suggestions"
+                                    />
+                                    <datalist id="dept-suggestions">
                                         {departments.map(dept => (
-                                            <option key={dept} value={dept}>{dept}</option>
+                                            <option key={dept} value={dept} />
                                         ))}
-                                    </select>
+                                    </datalist>
                                 </div>
                             </div>
 
